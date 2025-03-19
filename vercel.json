@@ -1,9 +1,8 @@
-            "src": "static/**",
 {
     "version": 2,
     "builds": [
         {
-            "src": "wsgi.py",
+            "src": "app.py",
             "use": "@vercel/python"
         },
         {
@@ -18,11 +17,11 @@
         },
         {
             "src": "/(.*)",
-            "dest": "/wsgi.py"
+            "dest": "/app.py"
         }
     ],
     "env": {
         "FLASK_ENV": "production",
-        "FLASK_APP": "wsgi.py"
+        "FLASK_APP": "app.py"
     }
 }
