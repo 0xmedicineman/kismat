@@ -1,9 +1,11 @@
 from flask import Flask, render_template, jsonify, request
-from datetime import datetime
+from flask_cors import CORS
+import json
 
 app = Flask(__name__)
+CORS(app)
 
-# Simulated bus stop data for Dar es Salaam
+# Bus stop data
 BUS_STOPS = {
     'kariakoo': {'name': 'Kariakoo', 'lat': -6.8179, 'lng': 39.2707},
     'posta': {'name': 'Posta', 'lat': -6.8182, 'lng': 39.2883},
@@ -12,17 +14,25 @@ BUS_STOPS = {
     'ubungo': {'name': 'Ubungo', 'lat': -6.7924, 'lng': 39.2089}
 }
 
-# Simulated bus routes
-BUS_ROUTES = {
+# Routes data
+ROUTES = {
     'route1': {
-        'name': 'Kimara - Kariakoo',
-        'stops': ['kimara', 'ubungo', 'posta', 'kariakoo'],
-        'frequency': 15  # minutes
+        'name': 'Kariakoo - Posta',
+        'stops': ['kariakoo', 'posta'],
+        'fare': 'TSh 450',
+        'duration': '15 mins'
     },
     'route2': {
-        'name': 'Mbezi - Kariakoo',
-        'stops': ['mbezi', 'ubungo', 'posta', 'kariakoo'],
-        'frequency': 20
+        'name': 'Ubungo - Kimara',
+        'stops': ['ubungo', 'kimara'],
+        'fare': 'TSh 650',
+        'duration': '25 mins'
+    },
+    'route3': {
+        'name': 'Mbezi - Kimara',
+        'stops': ['mbezi', 'kimara'],
+        'fare': 'TSh 550',
+        'duration': '20 mins'
     }
 }
 
@@ -30,65 +40,62 @@ BUS_ROUTES = {
 def index():
     return render_template('index.html')
 
-@app.route('/api/route', methods=['POST'])
-def find_route():
-    data = request.get_json()
-    from_location = data.get('from', '').lower()
-    to_location = data.get('to', '').lower()
-    
-    # Find nearest stops to source and destination
-    from_stop = find_nearest_stop(from_location)
-    to_stop = find_nearest_stop(to_location)
+@app.route('/api/bus-stops')
+def get_bus_stops():
+    return jsonify(BUS_STOPS)
+
+@app.route('/api/routes')
+def get_routes():
+    return jsonify(ROUTES)
+
+@app.route('/api/route')
+def get_route():
+    from_stop = request.args.get('from', '').lower()
+    to_stop = request.args.get('to', '').lower()
     
     if not from_stop or not to_stop:
-        return jsonify({'error': 'Location not found'}), 404
+        return jsonify({'error': 'Both from and to stops are required'}), 400
     
-    # Find route between stops
-    route = find_best_route(from_stop, to_stop)
-    
-    return jsonify(route)
-
-def find_nearest_stop(location):
-    # In a real app, this would use geocoding to find actual coordinates
-    # For demo, we'll just match against known stop names
-    for stop_id, stop in BUS_STOPS.items():
-        if location in stop['name'].lower():
-            return stop_id
-    return None
-
-def find_best_route(from_stop, to_stop):
-    # Find a route that contains both stops
-    for route_id, route in BUS_ROUTES.items():
+    # Find routes that connect these stops
+    matching_routes = []
+    for route_id, route in ROUTES.items():
         stops = route['stops']
         if from_stop in stops and to_stop in stops:
-            # Get the subset of stops between source and destination
-            start_idx = stops.index(from_stop)
-            end_idx = stops.index(to_stop)
-            if start_idx > end_idx:
-                stops = list(reversed(stops))
-                start_idx = stops.index(from_stop)
-                end_idx = stops.index(to_stop)
-            
-            route_stops = stops[start_idx:end_idx + 1]
-            
-            # Create response with stop details and estimated times
-            stops_data = []
-            for idx, stop_id in enumerate(route_stops):
-                stop = BUS_STOPS[stop_id].copy()
-                stop['eta'] = idx * route['frequency']  # Simple ETA calculation
-                stops_data.append(stop)
-            
-            # Create path coordinates for the route
-            path = [[BUS_STOPS[stop_id]['lat'], BUS_STOPS[stop_id]['lng']] 
-                   for stop_id in route_stops]
-            
-            return {
-                'route_name': route['name'],
-                'stops': stops_data,
-                'path': path
-            }
+            # Check if stops are in correct order
+            from_index = stops.index(from_stop)
+            to_index = stops.index(to_stop)
+            if from_index < to_index:
+                matching_routes.append(route)
     
-    return {'error': 'No direct route found'}
+    if not matching_routes:
+        return jsonify({'error': 'No direct routes found'}), 404
+    
+    return jsonify(matching_routes)
 
+@app.route('/api/nearby-stops')
+def get_nearby_stops():
+    lat = float(request.args.get('lat', 0))
+    lng = float(request.args.get('lng', 0))
+    
+    if not lat or not lng:
+        return jsonify({'error': 'Latitude and longitude are required'}), 400
+    
+    # Find stops within 2km (rough calculation)
+    nearby = []
+    for stop_id, stop in BUS_STOPS.items():
+        dlat = abs(stop['lat'] - lat)
+        dlng = abs(stop['lng'] - lng)
+        if dlat < 0.02 and dlng < 0.02:  # Approximately 2km
+            nearby.append({
+                'id': stop_id,
+                **stop
+            })
+    
+    return jsonify(nearby)
+
+# This is for local development
 if __name__ == '__main__':
     app.run(debug=True)
+
+# This is for Vercel
+app = app
