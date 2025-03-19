@@ -1,6 +1,6 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_cors import CORS
-import json
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -36,8 +36,13 @@ ROUTES = {
     }
 }
 
-@app.route('/')
-def index():
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    if path == "":
+        return render_template('index.html')
+    if os.path.exists(os.path.join('static', path)):
+        return send_from_directory('static', path)
     return render_template('index.html')
 
 @app.route('/api/bus-stops')
@@ -56,12 +61,10 @@ def get_route():
     if not from_stop or not to_stop:
         return jsonify({'error': 'Both from and to stops are required'}), 400
     
-    # Find routes that connect these stops
     matching_routes = []
     for route_id, route in ROUTES.items():
         stops = route['stops']
         if from_stop in stops and to_stop in stops:
-            # Check if stops are in correct order
             from_index = stops.index(from_stop)
             to_index = stops.index(to_stop)
             if from_index < to_index:
@@ -80,7 +83,6 @@ def get_nearby_stops():
     if not lat or not lng:
         return jsonify({'error': 'Latitude and longitude are required'}), 400
     
-    # Find stops within 2km (rough calculation)
     nearby = []
     for stop_id, stop in BUS_STOPS.items():
         dlat = abs(stop['lat'] - lat)
@@ -93,9 +95,8 @@ def get_nearby_stops():
     
     return jsonify(nearby)
 
-# This is for local development
 if __name__ == '__main__':
     app.run(debug=True)
 
-# This is for Vercel
+# For Vercel
 app = app
