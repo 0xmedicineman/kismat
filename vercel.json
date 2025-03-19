@@ -9,7 +9,10 @@
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "/index.html"
+            "dest": "/$1"
         }
-    ]
+    ],
+    "github": {
+        "silent": true
+    }
 }
