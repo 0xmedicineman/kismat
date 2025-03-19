@@ -2,7 +2,7 @@
     "version": 2,
     "builds": [
         {
-            "src": "app.py",
+            "src": "wsgi.py",
             "use": "@vercel/python"
         },
         {
@@ -17,11 +17,11 @@
         },
         {
             "src": "/(.*)",
-            "dest": "/app.py"
+            "dest": "/wsgi.py"
         }
     ],
     "env": {
         "FLASK_ENV": "production",
-        "FLASK_APP": "app.py"
+        "FLASK_APP": "wsgi.py"
     }
 }
