@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KiSMAT - Smart Mobility and Transport</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.css" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <!-- Loading Spinner -->
+    <div class="loading-spinner">
+        <span>Loading...</span>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast" id="notificationToast"></div>
+
+    <!-- Hero Section for Desktop -->
+    <div class="hero-section">
+        <div class="hero-content">
+            <h1>KiSMAT</h1>
+            <p>Smart Mobility and Transport Solution for Dar es Salaam</p>
+        </div>
+        <div class="hero-image">
+            <img src="static/images/hero-image.png" alt="Dar es Salaam City">
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Desktop Layout -->
+        <div class="desktop-layout">
+            <div class="sidebar">
+                <div class="card">
+                    <h2>Plan Your Journey</h2>
+                    <form id="routeForm">
+                        <!-- Error Message -->
+                        <div class="error-message" id="routeError"></div>
+                        <div class="form-group">
+                            <label for="from">From:</label>
+                            <div class="input-with-suggestions">
+                                <input type="text" id="from" name="from" class="form-control" placeholder="Enter origin">
+                                <div id="fromSuggestions" class="suggestions-container"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="to">To:</label>
+                            <div class="input-with-suggestions">
+                                <input type="text" id="to" name="to" class="form-control" placeholder="Enter destination">
+                                <div id="toSuggestions" class="suggestions-container"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="arrivalTime">Desired Arrival Time (Optional):</label>
+                            <input type="time" id="arrivalTime" name="arrivalTime" class="form-control">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Find Route</button>
+                    </form>
+                    
+                    <!-- AI Arrival Planner -->
+                    <div id="arrivalPlanner" class="arrival-planner" style="display: none;">
+                        <h3>AI Arrival Planner</h3>
+                        <div class="arrival-time-suggestion">
+                            <i class="fas fa-robot"></i>
+                            <h4 id="suggestedDepartureTime">Leave at <span>8:15 AM</span></h4>
+                        </div>
+                        <div class="arrival-time-breakdown">
+                            <div class="breakdown-item">
+                                <i class="fas fa-walking"></i>
+                                <div>
+                                    <span>Walking time</span>
+                                    <strong id="walkTime">5 min</strong>
+                                </div>
+                            </div>
+                            <div class="breakdown-item">
+                                <i class="fas fa-clock"></i>
+                                <div>
+                                    <span>Average wait time</span>
+                                    <strong id="waitTime">3 min</strong>
+                                </div>
+                            </div>
+                            <div class="breakdown-item">
+                                <i class="fas fa-bus"></i>
+                                <div>
+                                    <span>Journey time</span>
+                                    <strong id="journeyTime">15 min</strong>
+                                </div>
+                            </div>
+                            <div class="breakdown-item">
+                                <i class="fas fa-shield-alt"></i>
+                                <div>
+                                    <span>Buffer for delays</span>
+                                    <strong id="bufferTime">5 min</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="routeResults"></div>
+                </div>
+            </div>
+            <div class="main-content">
+                <div class="card map-container">
+                    <div id="map"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Layout -->
+        <div class="mobile-layout">
+            <div class="mobile-tab-content">
+                <!-- Journey Planning Tab -->
+                <div id="tab-journey" class="active-tab">
+                    <div class="mobile-map-container">
+                        <div id="mobile-map"></div>
+                    </div>
+                    <div class="mobile-form-container">
+                        <form id="mobileRouteForm" class="mobile-route-form">
+                            <!-- Error Message -->
+                            <div class="error-message" id="mobileRouteError"></div>
+                            <div class="form-group">
+                                <label for="mobileFrom">From:</label>
+                                <div class="input-with-suggestions">
+                                    <input type="text" id="mobileFrom" name="from" class="form-control" placeholder="Enter origin">
+                                    <div id="mobileFromSuggestions" class="suggestions-container"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="mobileTo">To:</label>
+                                <div class="input-with-suggestions">
+                                    <input type="text" id="mobileTo" name="to" class="form-control" placeholder="Enter destination">
+                                    <div id="mobileToSuggestions" class="suggestions-container"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="mobileArrivalTime">Desired Arrival Time (Optional):</label>
+                                <input type="time" id="mobileArrivalTime" name="arrivalTime" class="form-control">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Find Route</button>
+                        </form>
+                        
+                        <!-- AI Arrival Planner (Mobile) -->
+                        <div id="mobileArrivalPlanner" class="arrival-planner" style="display: none;">
+                            <h3>AI Arrival Planner</h3>
+                            <div class="arrival-time-suggestion">
+                                <i class="fas fa-robot"></i>
+                                <h4 id="mobileSuggestedDepartureTime">Leave at <span>8:15 AM</span></h4>
+                            </div>
+                            <div class="arrival-time-breakdown">
+                                <div class="breakdown-item">
+                                    <i class="fas fa-walking"></i>
+                                    <div>
+                                        <span>Walking time</span>
+                                        <strong id="mobileWalkTime">5 min</strong>
+                                    </div>
+                                </div>
+                                <div class="breakdown-item">
+                                    <i class="fas fa-clock"></i>
+                                    <div>
+                                        <span>Average wait time</span>
+                                        <strong id="mobileWaitTime">3 min</strong>
+                                    </div>
+                                </div>
+                                <div class="breakdown-item">
+                                    <i class="fas fa-bus"></i>
+                                    <div>
+                                        <span>Journey time</span>
+                                        <strong id="mobileJourneyTime">15 min</strong>
+                                    </div>
+                                </div>
+                                <div class="breakdown-item">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <div>
+                                        <span>Buffer for delays</span>
+                                        <strong id="mobileBufferTime">5 min</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="mobileRouteResults"></div>
+                    </div>
+                </div>
+                
+                <!-- Nearby Stops Tab -->
+                <div id="tab-stops">
+                    <div class="mobile-map-container">
+                        <div id="stopsMap"></div>
+                    </div>
+                    <div class="nearby-stops-container">
+                        <h3>Nearby Bus Stops</h3>
+                        <div id="nearbyStops" class="nearby-stops-list"></div>
+                    </div>
+                </div>
+                
+                <!-- About Tab -->
+                <div id="tab-about">
+                    <div class="about-container">
+                        <h2>About KiSMAT</h2>
+                        <div class="about-image">
+                            <img src="static/images/about-image.png" alt="Dar es Salaam Transport">
+                        </div>
+                        <p>KiSMAT is a modern transportation app designed to make commuting in Dar es Salaam easier and more efficient. Our app helps you navigate the city's public transportation system with real-time updates and smart features.</p>
+                        
+                        <h3>Key Features</h3>
+                        <div class="features-grid">
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="fas fa-route"></i>
+                                </div>
+                                <h4>Route Planning</h4>
+                                <p>Find the best routes between any two points in the city</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <h4>Nearby Stops</h4>
+                                <p>Discover bus stops close to your current location</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <h4>AI Arrival Planning</h4>
+                                <p>Get smart suggestions for when to leave to arrive on time</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="fas fa-mobile-alt"></i>
+                                </div>
+                                <h4>Mobile Friendly</h4>
+                                <p>Optimized for use on the go with your smartphone</p>
+                            </div>
+                        </div>
+                        
+                        <div class="about-footer">
+                            <p>&copy; 2023 KiSMAT. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mobile Bottom Navigation -->
+            <div class="mobile-bottom-nav">
+                <div class="mobile-bottom-nav-item active" data-tab="tab-journey">
+                    <i class="fas fa-route"></i>
+                    <span>Journey</span>
+                </div>
+                <div class="mobile-bottom-nav-item" data-tab="tab-stops">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Stops</span>
+                </div>
+                <div class="mobile-bottom-nav-item" data-tab="tab-about">
+                    <i class="fas fa-info-circle"></i>
+                    <span>About</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
+    <!-- Custom JS -->
+    <script src="static/js/main.js"></script>
+
+    <!-- Static Data for the standalone version -->
+    <script>
+        // Bus stop data that would normally come from the server
+        const BUS_STOPS = {
+            'kariakoo': {'name': 'Kariakoo', 'lat': -6.8179, 'lng': 39.2707},
+            'posta': {'name': 'Posta', 'lat': -6.8182, 'lng': 39.2883},
+            'kimara': {'name': 'Kimara', 'lat': -6.7808, 'lng': 39.1883},
+            'mbezi': {'name': 'Mbezi', 'lat': -6.7374, 'lng': 39.1736},
+            'ubungo': {'name': 'Ubungo', 'lat': -6.7924, 'lng': 39.2089}
+        };
+
+        // Bus routes data that would normally come from the server
+        const BUS_ROUTES = {
+            'kariakoo-posta': {
+                'stops': ['kariakoo', 'posta'],
+                'duration': 15,
+                'fare': 400,
+                'schedule': ['06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00']
+            },
+            'kariakoo-kimara': {
+                'stops': ['kariakoo', 'ubungo', 'kimara'],
+                'duration': 45,
+                'fare': 650,
+                'schedule': ['06:15', '06:45', '07:15', '07:45', '08:15', '08:45', '09:15']
+            },
+            'posta-mbezi': {
+                'stops': ['posta', 'ubungo', 'mbezi'],
+                'duration': 60,
+                'fare': 800,
+                'schedule': ['06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30']
+            },
+            'ubungo-mbezi': {
+                'stops': ['ubungo', 'mbezi'],
+                'duration': 30,
+                'fare': 500,
+                'schedule': ['06:00', '06:20', '06:40', '07:00', '07:20', '07:40', '08:00']
+            },
+            'kimara-ubungo': {
+                'stops': ['kimara', 'ubungo'],
+                'duration': 25,
+                'fare': 450,
+                'schedule': ['06:10', '06:30', '06:50', '07:10', '07:30', '07:50', '08:10']
+            }
+        };
+
+        // Override the fetch routes function to use static data
+        function fetchRoutes(from, to) {
+            return new Promise((resolve) => {
+                // Simulate network delay
+                setTimeout(() => {
+                    const routes = [];
+                    
+                    // Check direct routes
+                    for (const [routeId, route] of Object.entries(BUS_ROUTES)) {
+                        const stops = route.stops;
+                        const fromIndex = stops.indexOf(from);
+                        const toIndex = stops.indexOf(to);
+                        
+                        if (fromIndex !== -1 && toIndex !== -1 && fromIndex < toIndex) {
+                            routes.push({
+                                id: routeId,
+                                from: BUS_STOPS[from].name,
+                                to: BUS_STOPS[to].name,
+                                duration: route.duration,
+                                fare: route.fare,
+                                stops: stops.slice(fromIndex, toIndex + 1).map(stop => BUS_STOPS[stop])
+                            });
+                        }
+                    }
+                    
+                    // Check for connecting routes
+                    if (routes.length === 0) {
+                        // Find all routes from the origin
+                        const fromRoutes = [];
+                        for (const [routeId, route] of Object.entries(BUS_ROUTES)) {
+                            const stops = route.stops;
+                            const fromIndex = stops.indexOf(from);
+                            
+                            if (fromIndex !== -1) {
+                                for (let i = fromIndex + 1; i < stops.length; i++) {
+                                    fromRoutes.push({
+                                        connection: stops[i],
+                                        route: {
+                                            id: routeId,
+                                            from: BUS_STOPS[from].name,
+                                            to: BUS_STOPS[stops[i]].name,
+                                            duration: route.duration * ((i - fromIndex) / (stops.length - 1)),
+                                            fare: route.fare * ((i - fromIndex) / (stops.length - 1)),
+                                            stops: stops.slice(fromIndex, i + 1).map(stop => BUS_STOPS[stop])
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                        
+                        // Find all routes to the destination
+                        const toRoutes = [];
+                        for (const [routeId, route] of Object.entries(BUS_ROUTES)) {
+                            const stops = route.stops;
+                            const toIndex = stops.indexOf(to);
+                            
+                            if (toIndex !== -1) {
+                                for (let i = 0; i < toIndex; i++) {
+                                    toRoutes.push({
+                                        connection: stops[i],
+                                        route: {
+                                            id: routeId,
+                                            from: BUS_STOPS[stops[i]].name,
+                                            to: BUS_STOPS[to].name,
+                                            duration: route.duration * ((toIndex - i) / (stops.length - 1)),
+                                            fare: route.fare * ((toIndex - i) / (stops.length - 1)),
+                                            stops: stops.slice(i, toIndex + 1).map(stop => BUS_STOPS[stop])
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                        
+                        // Find connecting routes
+                        for (const fromRoute of fromRoutes) {
+                            for (const toRoute of toRoutes) {
+                                if (fromRoute.connection === toRoute.connection) {
+                                    routes.push({
+                                        id: `${fromRoute.route.id}+${toRoute.route.id}`,
+                                        from: BUS_STOPS[from].name,
+                                        to: BUS_STOPS[to].name,
+                                        duration: fromRoute.route.duration + toRoute.route.duration,
+                                        fare: fromRoute.route.fare + toRoute.route.fare,
+                                        connection: BUS_STOPS[fromRoute.connection].name,
+                                        stops: [
+                                            ...fromRoute.route.stops,
+                                            ...toRoute.route.stops.slice(1)
+                                        ]
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    
+                    resolve(routes);
+                }, 500);
+            });
+        }
+    </script>
+</body>
+</html>
